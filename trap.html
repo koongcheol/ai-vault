@@ -34,6 +34,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 button{font:inherit;cursor:pointer;color:inherit}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 .hidden{display:none!important}
+.who-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+select.text-in{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 55%,calc(100% - 12px) 55%;background-size:6px 6px;background-repeat:no-repeat;padding-right:30px}
 .wrap{max-width:560px;margin:0 auto;padding:24px 18px 48px}
 
 h1{font-size:38px;line-height:1.15;margin:0 0 10px;text-align:center}
@@ -116,8 +118,13 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
   <h1 class="display">AI 함정 설계자</h1>
   <p class="lead">1교시엔 정해진 금고를 열었다면,<br>이번엔 진짜 AI를 걸려들게 할 함정을 직접 만들어요.</p>
 
+  <div class="who-grid">
+    <div><label class="label" for="gradeIn">학년</label><select id="gradeIn" class="text-in"><option value="">선택</option><option>1</option><option>2</option><option>3</option></select></div>
+    <div><label class="label" for="clsIn">반</label><input id="clsIn" class="text-in" inputmode="numeric" maxlength="2" placeholder="예: 3" autocomplete="off"></div>
+    <div><label class="label" for="numIn">번호</label><input id="numIn" class="text-in" inputmode="numeric" maxlength="2" placeholder="예: 15" autocomplete="off"></div>
+  </div>
   <label class="label" for="nameIn">이름</label>
-  <input id="nameIn" class="text-in" placeholder="예: 2학년 3반 김민지" maxlength="30" autocomplete="off">
+  <input id="nameIn" class="text-in" placeholder="예: 김민지" maxlength="20" autocomplete="off">
   <div class="one">🎯 4가지 함정 중 마음에 드는 1가지만 골라서 하면 돼요!</div>
   <button id="startBtn" class="big-btn">함정 고르러 가기</button>
 
@@ -135,7 +142,7 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
     <p>🙅 친구, 선생님, 연예인 등 실제 사람에 대한 거짓말 만들기 금지</p>
     <p>🙅 위험한 정보나 욕설을 끌어내려는 질문 금지</p>
     <p>🙅 AI에 내 이름, 전화번호 같은 개인정보 입력 금지</p>
-    <p>📱 AI 앱이 없다면 질문만 만들어 제출해도 괜찮아요.</p>
+    <p>📱 모든 칸을 채워야 제출돼요. AI 앱이 없다면 친구 폰의 AI로 함께 시험해 보세요.</p>
   </div>
 </section>
 
@@ -190,10 +197,11 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
   /* ===== 구글 폼 연결 설정 (선생님용) ===== */
   const FORM = {
     action: 'https://docs.google.com/forms/d/e/1FAIpQLSfOrcg7lZ4ZnduI8QFKxy7T8tyexxsa9JE1tCBsyiWf_jjA5g/formResponse',
-    name: 'entry.122760477',       // 이름
+    name: 'entry.308354594',       // 이름
     question: 'entry.1803939881',  // 질문 (앞에 [함정 종류]가 자동으로 붙어요)
     ai: 'entry.1503526239',        // 사용한 AI
-    answer: 'entry.250171910'      // AI 답변
+    answer: 'entry.250171910',     // AI 답변
+    grade: 'entry.122760477', cls: 'entry.1000829670', num: 'entry.1103721068'  // 학년/반/번호
   };
   /* ======================================= */
 
@@ -253,7 +261,8 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
   const AIS = ['ChatGPT','Gemini','Claude','뤼튼','기타'];
 
   const KEY='ai-trap-v2';
-  let S = {name:'', tab:-1, sent:[], draft:{}};
+  let S = {grade:'', cls:'', num:'', name:'', tab:-1, sent:[], draft:{}};
+  const who = () => S.grade+'학년 '+S.cls+'반 '+S.num+'번 '+S.name;
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
   function load(){ try{ const v=JSON.parse(localStorage.getItem(KEY)||'null'); if(v&&Array.isArray(v.sent)) S=Object.assign(S,v); }catch(e){} }
 
@@ -286,7 +295,7 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
       t.appendChild(b);
     });
     $('count').textContent='제출 '+S.sent.length+'개';
-    $('who').textContent=S.name;
+    $('who').textContent=who();
   }
 
   function renderCard(){
@@ -324,7 +333,7 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
         <button class="copy-btn" id="copyBtn">📋 질문 복사해서 AI에 물어보기</button>
         <label class="label" for="fAI">2. 사용한 AI</label>
         <div class="chips" id="aiChips">${AIS.map(a=>`<button class="chip" data-ai="${a}" aria-pressed="${d.ai===a}">${a}</button>`).join('')}</div>
-        <input id="fAI" class="text-in" placeholder="직접 입력해도 돼요 (안 써봤으면 비워두기)" value="${esc(d.ai)}">
+        <input id="fAI" class="text-in" placeholder="직접 입력해도 돼요" value="${esc(d.ai)}">
         <label class="label" for="fA">3. AI 답변</label>
         <textarea id="fA" class="text-in" placeholder="${esc(c.aph)}">${esc(d.answer)}</textarea>
         <button class="big-btn" id="sendBtn">📮 함정 제출</button>
@@ -353,11 +362,14 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
   async function submit(c){
     const d=draft(c.id);
     if(!d.question.trim()){ toast('질문을 써주세요'); $('fQ').focus(); return; }
+    if(!d.ai.trim()){ toast('사용한 AI를 골라주세요'); $('fAI').focus(); return; }
+    if(!d.answer.trim()){ toast('AI 답변을 적어주세요'); $('fA').focus(); return; }
     if(!FORM.action){ toast('아직 제출 폼이 연결되지 않았어요. 선생님께 알려주세요.'); return; }
     const btn=$('sendBtn'); btn.disabled=true; btn.textContent='전송 중…';
     const body=new URLSearchParams();
     const put=(k,v)=>{ if(FORM[k]) body.append(FORM[k], v); };
-    put('name',S.name);
+    if(FORM.grade){ put('grade',S.grade); put('cls',S.cls); put('num',S.num); put('name',S.name); }
+    else put('name',who());
     put('question','['+c.emoji+' '+c.title+'] '+d.question.trim());
     put('ai',d.ai.trim()||'안 써봄');
     put('answer',d.answer.trim()||'(없음)');
@@ -375,14 +387,17 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
 
   function showFinal(){
     show('final');
-    $('fName').textContent=S.name;
+    $('fName').textContent=who();
     $('fTotal').textContent=S.sent.length;
   }
 
   $('startBtn').onclick=()=>{
-    const n=$('nameIn').value.trim();
+    const grade=$('gradeIn').value, cls=$('clsIn').value.trim(), num=$('numIn').value.trim(), n=$('nameIn').value.trim();
+    if(!grade){ toast('학년을 골라 주세요'); $('gradeIn').focus(); return; }
+    if(!/^\d{1,2}$/.test(cls)){ toast('반을 숫자로 입력해 주세요'); $('clsIn').focus(); return; }
+    if(!/^\d{1,2}$/.test(num)){ toast('번호를 숫자로 입력해 주세요'); $('numIn').focus(); return; }
     if(!n){ toast('이름을 입력해 주세요'); $('nameIn').focus(); return; }
-    S.name=n; save(); renderPick();
+    S.grade=grade; S.cls=String(+cls); S.num=String(+num); S.name=n; save(); renderPick();
   };
   $('nameIn').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing) $('startBtn').click(); });
   $('endBtn').onclick=()=>{
@@ -392,7 +407,7 @@ textarea.text-in{min-height:96px;resize:vertical;line-height:1.5}
   $('backBtn').onclick=openMain;
 
   load();
-  if(S.name){ if(S.tab>=0) openMain(); else renderPick(); }
+  if(S.name && S.grade){ if(S.tab>=0) openMain(); else renderPick(); }
 })();
 </script>
 </body>

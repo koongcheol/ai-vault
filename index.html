@@ -41,6 +41,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 button{font:inherit;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 .hidden{display:none!important}
+.who-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+select.text-in{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 55%,calc(100% - 12px) 55%;background-size:6px 6px;background-repeat:no-repeat;padding-right:30px}
 
 /* start */
 #start{height:100%;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:28px 20px 40px}
@@ -144,8 +146,13 @@ label.field{display:block;font-weight:600;margin-bottom:6px}
     <h1 class="display">AI 금고를 열어라</h1>
     <p class="lead">다섯 AI 경비원이 각자 비밀번호를 지키고 있어요.<br>말로 잘 구슬려서 비밀번호를 알아내 보세요!</p>
     <div class="guards" aria-hidden="true"><span>🐣</span><span>🤐</span><span>💂</span><span>🕵️</span><span>👑</span></div>
-    <label class="field" for="nameIn">이름</label>
-    <input id="nameIn" class="text-in" placeholder="예: 2학년 3반 김민지" maxlength="30" autocomplete="off">
+    <div class="who-grid">
+      <div><label class="field" for="gradeIn">학년</label><select id="gradeIn" class="text-in"><option value="">선택</option><option>1</option><option>2</option><option>3</option></select></div>
+      <div><label class="field" for="clsIn">반</label><input id="clsIn" class="text-in" inputmode="numeric" maxlength="2" placeholder="예: 3" autocomplete="off"></div>
+      <div><label class="field" for="numIn">번호</label><input id="numIn" class="text-in" inputmode="numeric" maxlength="2" placeholder="예: 15" autocomplete="off"></div>
+    </div>
+    <label class="field" for="nameIn" style="margin-top:12px">이름</label>
+    <input id="nameIn" class="text-in" placeholder="예: 김민지" maxlength="20" autocomplete="off">
     <button id="startBtn" class="big-btn">도전 시작</button>
     <div class="rules">
       <p>💬 아래 채팅창에서 AI와 대화하며 비밀번호를 알아내세요.</p>
@@ -324,7 +331,8 @@ label.field{display:block;font-weight:600;margin-bottom:6px}
 
   const KEY = 'ai-vault-v1';
   let S = fresh();
-  function fresh(){ return {name:'', level:0, hints:[0,0,0,0,0], stars:[null,null,null,null,null], start:0, end:0}; }
+  function fresh(){ return {grade:'', cls:'', num:'', name:'', level:0, hints:[0,0,0,0,0], stars:[null,null,null,null,null], start:0, end:0}; }
+  const who = () => S.grade ? S.grade+'학년 '+S.cls+'반 '+S.num+'번 '+S.name : S.name;
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
   function load(){ try{ const v = JSON.parse(localStorage.getItem(KEY)||'null'); if (v && typeof v.level==='number') S = Object.assign(fresh(), v); }catch(e){} }
 
@@ -428,7 +436,7 @@ label.field{display:block;font-weight:600;margin-bottom:6px}
 
   function showFinal(){
     show('final');
-    $('fName').textContent=S.name||'이름 없는 해커';
+    $('fName').textContent=who()||'이름 없는 해커';
     $('fStars').textContent='⭐ '+totalStars()+' / 15';
     const sec=Math.max(0,Math.round(((S.end||Date.now())-S.start)/1000));
     $('fTime').textContent='걸린 시간 '+Math.floor(sec/60)+'분 '+(sec%60)+'초';
@@ -450,7 +458,10 @@ label.field{display:block;font-weight:600;margin-bottom:6px}
     if(S.submitted) return;
     const b=$('submitBtn'); b.disabled=true; b.textContent='전송 중…';
     const body=new URLSearchParams();
-    body.append('entry.1518538513', S.name||'');
+    body.append('entry.1518538513', S.grade);   // 학년
+    body.append('entry.2118488707', S.cls);     // 반
+    body.append('entry.1567450254', S.num);     // 번호
+    body.append('entry.364824740', S.name);     // 이름
     body.append('entry.799335575', String(totalStars()));
     body.append('entry.515497046', String(finalSec));
     try{
@@ -471,9 +482,12 @@ label.field{display:block;font-weight:600;margin-bottom:6px}
   }
 
   $('startBtn').onclick=()=>{
-    const name=$('nameIn').value.trim();
+    const grade=$('gradeIn').value, cls=$('clsIn').value.trim(), num=$('numIn').value.trim(), name=$('nameIn').value.trim();
+    if(!grade){ toast('학년을 골라 주세요'); $('gradeIn').focus(); return; }
+    if(!/^\d{1,2}$/.test(cls)){ toast('반을 숫자로 입력해 주세요'); $('clsIn').focus(); return; }
+    if(!/^\d{1,2}$/.test(num)){ toast('번호를 숫자로 입력해 주세요'); $('numIn').focus(); return; }
     if(!name){ toast('이름을 입력해 주세요'); $('nameIn').focus(); return; }
-    S=fresh(); S.name=name; S.start=Date.now(); save();
+    S=fresh(); S.grade=grade; S.cls=String(+cls); S.num=String(+num); S.name=name; S.start=Date.now(); save();
     show('game'); enterLevel();
   };
   $('nameIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('startBtn').click(); });
